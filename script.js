@@ -7,53 +7,120 @@ canvas.height = window.innerHeight;
 
 // 게임 상태
 let ammo = 2;
+let lives = 3;
+let gameState = "COUNTDOWN"; // COUNTDOWN, PLAYING, GAMEOVER
+let countdownNum = 3;
+
 let ball = {
     x: canvas.width / 2,
     y: canvas.height / 2,
     radius: 30,
-    dy: 2,      // 수직 속도
-    gravity: 0.15 // 중력 (내려오는 힘)
+    dx: 0,        // 수평 속도 추가
+    dy: 0,        // 수직 속도
+    gravity: 0.15
 };
+
+// 카운트다운 타이머
+function startCountdown() {
+    gameState = "COUNTDOWN";
+    countdownNum = 3;
+    ball.x = canvas.width / 2;
+    ball.y = canvas.height / 2;
+    ball.dx = 0;
+    ball.dy = 0;
+
+    const timer = setInterval(() => {
+        countdownNum--;
+        if (countdownNum <= 0) {
+            clearInterval(timer);
+            gameState = "PLAYING";
+        }
+    }, 1000);
+}
 
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+    // UI 그리기 (목숨 및 총알)
+    ctx.fillStyle = "white";
+    ctx.font = "24px Arial";
+    ctx.fillText(`Ammo: ${ammo}`, 20, 40);
+    ctx.fillText(`Lives: ${"❤️".repeat(lives)}`, 20, 80);
+
     // 공 그리기
     ctx.beginPath();
     ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
-    ctx.fillStyle = ammo > 0 ? "#00ff88" : "#ff4444"; // 총알 없으면 빨간색
+    ctx.fillStyle = ammo > 0 ? "#00ff88" : "#ff4444";
     ctx.fill();
     ctx.closePath();
 
-    // 중력 적용
-    ball.dy += ball.gravity;
-    ball.y += ball.dy;
+    if (gameState === "PLAYING") {
+        // 물리 적용
+        ball.dy += ball.gravity;
+        ball.x += ball.dx;
+        ball.y += ball.dy;
 
-    // 바닥에 떨어지면 초기화 (게임 오버 로직 대신)
-    if (ball.y + ball.radius > canvas.height) {
-        ball.y = canvas.height / 2;
-        ball.dy = 0;
-        ammo = 2;
+        // 벽 충돌 (옆으로 튕기기)
+        if (ball.x - ball.radius < 0 || ball.x + ball.radius > canvas.width) {
+            ball.dx *= -0.8;
+        }
+
+        // 바닥에 떨어졌을 때
+        if (ball.y + ball.radius > canvas.height) {
+            lives--;
+            if (lives > 0) {
+                startCountdown(); // 목숨 남았으면 다시 카운트다운
+            } else {
+                gameState = "GAMEOVER";
+            }
+        }
+    } else if (gameState === "COUNTDOWN") {
+        ctx.fillStyle = "white";
+        ctx.font = "80px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText(countdownNum, canvas.width / 2, canvas.height / 2 - 100);
+        ctx.textAlign = "start";
+    } else if (gameState === "GAMEOVER") {
+        ctx.fillStyle = "white";
+        ctx.font = "60px Arial";
+        ctx.textAlign = "center";
+        ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2);
+        ctx.font = "30px Arial";
+        ctx.fillText("Click to Restart", canvas.width / 2, canvas.height / 2 + 60);
+        ctx.textAlign = "start";
     }
 
-    ammoDisplay.innerText = ammo;
     requestAnimationFrame(draw);
 }
 
-// 클릭 이벤트 (사격)
+// 클릭 이벤트
 window.addEventListener('mousedown', (e) => {
-    if (ammo <= 0) return; // 총알 없으면 무시
+    if (gameState === "GAMEOVER") {
+        lives = 3;
+        ammo = 2;
+        startCountdown();
+        return;
+    }
 
-    ammo--; // 일단 한 발 감소
+    if (gameState !== "PLAYING" || ammo <= 0) return;
 
-    // 클릭 위치와 공의 거리 계산 (피타고라스 정리)
-    const dist = Math.sqrt((e.clientX - ball.x)**2 + (e.clientY - ball.y)**2);
+    ammo--;
 
-    // 공을 맞췄다면?
+    // 클릭 위치와 공 중심 사이의 거리(차이) 계산
+    const diffX = ball.x - e.clientX;
+    const diffY = ball.y - e.clientY;
+    const dist = Math.sqrt(diffX**2 + diffY**2);
+
+    // 공을 맞췄을 때
     if (dist < ball.radius) {
-        ball.dy = -8; // 위로 튕겨 올라감
-        ammo = 2;     // 총알 재장전!
+        // 반대 방향으로 날아가는 힘 계산 (멀리 누를수록 강하게)
+        // 힘의 세기 조절을 위해 0.2 등의 상수를 곱함
+        ball.dx = diffX * 0.3; 
+        ball.dy = diffY * 0.4; // 위쪽으로 더 잘 튀도록 설정
+        
+        ammo = 2; // 재장전
     }
 });
 
+startCountdown();
 draw();
