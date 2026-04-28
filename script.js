@@ -13,19 +13,28 @@ let currentBallCount = 1;
 
 let gameState = "START"; 
 let countdownNum = 3;
-
 let isFrozen = false; 
 let canFreeze = true; 
 
-const INITIAL_GRAVITY = 0.18; 
-let speedMultiplier = 1.0; 
-let globalGravity = INITIAL_GRAVITY;
+// --- [핵심 수정] 모드별 물리 변수 분리 ---
+const INITIAL_GRAVITY = 0.18;
+
+// 1번 공 전용 물리 변수
+let speedMultiplier1 = 1.0;
+let gravity1 = INITIAL_GRAVITY;
+
+// 2번 공 전용 물리 변수
+let speedMultiplier2 = 1.0;
+let gravity2 = INITIAL_GRAVITY;
 
 let balls = [];
 
 function initBalls(count) {
     balls = [];
     currentBallCount = count;
+    // 게임 시작 시 해당 모드의 물리 수치만 초기화
+    resetPhysics(); 
+    
     for (let i = 0; i < count; i++) {
         balls.push({
             x: canvas.width / 2 + (i * 100 - 50), 
@@ -37,10 +46,15 @@ function initBalls(count) {
     }
 }
 
-// 중력과 속도를 초기 상태로 되돌리는 함수
+// 현재 활성화된 모드의 물리 수치를 초기화
 function resetPhysics() {
-    speedMultiplier = 1.0;
-    globalGravity = INITIAL_GRAVITY;
+    if (currentBallCount === 1) {
+        speedMultiplier1 = 1.0;
+        gravity1 = INITIAL_GRAVITY;
+    } else {
+        speedMultiplier2 = 1.0;
+        gravity2 = INITIAL_GRAVITY;
+    }
 }
 
 function startCountdown() {
@@ -48,9 +62,8 @@ function startCountdown() {
     countdownNum = 3;
     isFrozen = false; 
     
-    // [추가] 목숨이 까이고 다시 시작할 때 물리 수치 초기화
+    // 목숨 잃었을 때 현재 모드 물리 초기화
     resetPhysics();
-    
     ammo = 2; 
 
     balls.forEach((b, i) => {
@@ -81,44 +94,49 @@ function draw() {
     else if (gameState === "SELECT") drawSelectScreen();
     else if (gameState === "PLAYING") {
         if (!isFrozen) {
-            // [수정] 1번 공 모드만 이전의 빠른 속도(0.00025)로 복구
-            const increment = (currentBallCount === 1) ? 0.00025 : 0.00007;
-            speedMultiplier += increment; 
-            globalGravity += (increment * 0.7); 
-
-            balls.forEach(b => {
-                b.dy += globalGravity;
-                b.x += b.dx * speedMultiplier;
-                b.y += b.dy * speedMultiplier;
-
-                if (b.x - b.radius < 0 || b.x + b.radius > canvas.width) {
-                    b.dx *= -0.8;
-                    b.x = b.x < b.radius ? b.radius : canvas.width - b.radius;
-                }
-                if (b.y - b.radius < 0) {
-                    b.dy *= -0.5;
-                    b.y = b.radius;
-                }
+            // --- [핵심 수정] 모드별로 다른 변수 업데이트 ---
+            if (currentBallCount === 1) {
+                // 1번 공: 매콤하게 빠름
+                speedMultiplier1 += 0.00025;
+                gravity1 += (0.00025 * 0.7);
                 
-                if (b.y + b.radius > canvas.height) {
-                    handleDeath();
-                }
-            });
+                updateBalls(speedMultiplier1, gravity1);
+            } else {
+                // 2번 공: 여유롭게 느림
+                speedMultiplier2 += 0.00007;
+                gravity2 += (0.00007 * 0.7);
+                
+                updateBalls(speedMultiplier2, gravity2);
+            }
         }
-    } 
-    else if (gameState === "COUNTDOWN") {
-        ctx.save();
-        ctx.fillStyle = "white";
-        ctx.font = "bold 100px Arial";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(countdownNum, canvas.width / 2, canvas.height / 2);
-        ctx.restore();
     } 
     else if (gameState === "GAMEOVER") drawGameOver();
 
     requestAnimationFrame(draw);
 }
+
+// 공의 움직임을 계산하는 공통 함수
+function updateBalls(multiplier, currentGravity) {
+    balls.forEach(b => {
+        b.dy += currentGravity;
+        b.x += b.dx * multiplier;
+        b.y += b.dy * multiplier;
+
+        if (b.x - b.radius < 0 || b.x + b.radius > canvas.width) {
+            b.dx *= -0.8;
+            b.x = b.x < b.radius ? b.radius : canvas.width - b.radius;
+        }
+        if (b.y - b.radius < 0) {
+            b.dy *= -0.5;
+            b.y = b.radius;
+        }
+        if (b.y + b.radius > canvas.height) {
+            handleDeath();
+        }
+    });
+}
+
+// --- UI 및 이벤트 로직 ---
 
 function drawUI() {
     ctx.save(); 
@@ -126,29 +144,29 @@ function drawUI() {
     ctx.fillText(`Ammo: ${ammo}`, 25, 25); 
     ctx.fillText(`Lives: ${"❤️".repeat(lives)}`, 25, 60); 
     ctx.fillText(`Score: ${score}`, 25, 95); 
+    
     let currentBest = currentBallCount === 1 ? highScore1 : highScore2;
+    let currentSpeed = currentBallCount === 1 ? speedMultiplier1 : speedMultiplier2;
+    
     ctx.fillStyle = "#ffd700";
     ctx.fillText(`Best (${currentBallCount} Ball): ${currentBest}`, 25, 130); 
     ctx.fillStyle = canFreeze ? "#00d4ff" : "#555";
     ctx.fillText(canFreeze ? "❄️ Skill: READY (R-Click)" : "❄️ Skill: USED", 25, 165);
     ctx.fillStyle = "#aaa"; ctx.font = "14px Arial";
-    ctx.fillText(`Speed: x${speedMultiplier.toFixed(2)}`, 25, 200);
+    ctx.fillText(`Mode Speed: x${currentSpeed.toFixed(2)}`, 25, 200);
     ctx.restore(); 
 }
 
-// ... (drawStartScreen, drawSelectScreen, drawGameOver, drawBall 함수는 동일하게 유지) ...
 function drawStartScreen() {
     ctx.save();
     ctx.fillStyle = "rgba(0, 0, 0, 0.85)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = "#00ff88"; ctx.textAlign = "center"; ctx.font = "bold 60px Arial";
     ctx.fillText("AIM JUGGLING", canvas.width / 2, canvas.height / 2 - 150);
     ctx.fillStyle = "white"; ctx.font = "22px Arial";
-    ctx.fillText("• Left Click: Shoot the ball back up", canvas.width / 2, canvas.height / 2 - 60);
-    ctx.fillText("• Right Click: Ice Skill (3s Freeze + Reset Physics)", canvas.width / 2, canvas.height / 2 - 20);
-    ctx.fillText("• Warning: Only 2 bullets! Don't miss.", canvas.width / 2, canvas.height / 2 + 20);
-    ctx.fillText("• Death resets speed and gravity.", canvas.width / 2, canvas.height / 2 + 60);
+    ctx.fillText("• Left Click: Shoot / Right Click: Ice Skill", canvas.width / 2, canvas.height / 2 - 40);
+    ctx.fillText("• Each mode has separate high scores & speed.", canvas.width / 2, canvas.height / 2 + 10);
     ctx.fillStyle = "#ffd700"; ctx.font = "bold 35px Arial";
-    ctx.fillText("Press [ ENTER ] to Continue", canvas.width / 2, canvas.height / 2 + 160);
+    ctx.fillText("Press [ ENTER ] to Continue", canvas.width / 2, canvas.height / 2 + 100);
     ctx.restore();
 }
 
@@ -158,8 +176,8 @@ function drawSelectScreen() {
     ctx.fillStyle = "white"; ctx.textAlign = "center"; ctx.font = "bold 45px Arial";
     ctx.fillText("SELECT MODE", canvas.width / 2, canvas.height / 2 - 100);
     ctx.font = "28px Arial";
-    ctx.fillStyle = "#ff4444"; ctx.fillText(`[ 1 ] 1 BALL (EXPERT - Very Fast Growth)`, canvas.width / 2, canvas.height / 2);
-    ctx.fillStyle = "#00ff88"; ctx.fillText(`[ 2 ] 2 BALLS (MULTITASK - Normal Growth)`, canvas.width / 2, canvas.height / 2 + 60);
+    ctx.fillStyle = "#ff4444"; ctx.fillText(`[ 1 ] 1 BALL (EXPERT - Ultra Fast)`, canvas.width / 2, canvas.height / 2);
+    ctx.fillStyle = "#00ff88"; ctx.fillText(`[ 2 ] 2 BALLS (MULTITASK - Normal)`, canvas.width / 2, canvas.height / 2 + 60);
     ctx.restore();
 }
 
@@ -167,7 +185,7 @@ function drawGameOver() {
     ctx.save();
     ctx.fillStyle = "white"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.font = "bold 60px Arial";
     ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2 - 40);
-    ctx.font = "30px Arial"; ctx.fillText(`Final Score: ${score}`, canvas.width / 2, canvas.height / 2 + 40);
+    ctx.font = "30px Arial"; ctx.fillText(`Score: ${score}`, canvas.width / 2, canvas.height / 2 + 40);
     ctx.fillStyle = "#ffd700"; ctx.fillText("Press [ ENTER ] to Restart", canvas.width / 2, canvas.height / 2 + 110);
     ctx.restore();
 }
@@ -190,12 +208,8 @@ function handleDeath() {
     } else {
         if (score > highScore2) { highScore2 = score; localStorage.setItem('aimGameHighScore2', highScore2); }
     }
-    
-    if (lives > 0) {
-        startCountdown(); // 여기서 resetPhysics()가 실행됨
-    } else {
-        gameState = "GAMEOVER";
-    }
+    if (lives > 0) startCountdown(); 
+    else gameState = "GAMEOVER";
 }
 
 window.addEventListener('keydown', (e) => {
@@ -230,14 +244,13 @@ window.addEventListener('mousedown', (e) => {
 function useFreezeSkill() {
     isFrozen = true;
     canFreeze = false; 
-    resetPhysics(); // 스킬 사용 시 물리 초기화
+    resetPhysics(); 
     ammo = 2; 
 
     setTimeout(() => { 
         isFrozen = false; 
         balls.forEach(b => {
-            b.dx = 0;
-            b.dy = -8; 
+            b.dx = 0; b.dy = -8; 
         });
     }, 3000);
 }
