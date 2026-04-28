@@ -73,11 +73,13 @@ function draw() {
     else if (gameState === "SELECT") drawSelectScreen();
     else if (gameState === "PLAYING") {
         if (!isFrozen) {
-            // [난이도 재수정] 1번 공: 매우 빠름 / 2번 공: 상대적으로 느림
-            const increment = (currentBallCount === 1) ? 0.00025 : 0.0001;
+            // [밸런스 조정] 중력 및 속도 가속 폭을 조금 더 완만하게 하향
+            // 1번 공: 0.00025 -> 0.00018 (EXPERT 지만 좀 더 공정하게)
+            // 2번 공: 0.0001 -> 0.00007 (멀티태스킹 집중)
+            const increment = (currentBallCount === 1) ? 0.00018 : 0.00007;
             
             speedMultiplier += increment; 
-            globalGravity += (increment * 0.85); 
+            globalGravity += (increment * 0.7); // 중력 증가분 비율도 약간 하향
 
             balls.forEach(b => {
                 b.dy += globalGravity;
@@ -164,9 +166,9 @@ function drawSelectScreen() {
     ctx.fillText("SELECT MODE", canvas.width / 2, canvas.height / 2 - 100);
     ctx.font = "28px Arial";
     ctx.fillStyle = "#ff4444";
-    ctx.fillText(`[ 1 ] 1 BALL (EXPERT - Very Fast!)`, canvas.width / 2, canvas.height / 2);
+    ctx.fillText(`[ 1 ] 1 BALL (EXPERT - High Gravity)`, canvas.width / 2, canvas.height / 2);
     ctx.fillStyle = "#00ff88";
-    ctx.fillText(`[ 2 ] 2 BALLS (MULTITASK - Normal Speed)`, canvas.width / 2, canvas.height / 2 + 60);
+    ctx.fillText(`[ 2 ] 2 BALLS (MULTITASK - Normal)`, canvas.width / 2, canvas.height / 2 + 60);
     ctx.restore();
 }
 
