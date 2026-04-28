@@ -16,14 +16,11 @@ let countdownNum = 3;
 let isFrozen = false; 
 let canFreeze = true; 
 
-// --- [핵심 수정] 모드별 물리 변수 분리 ---
 const INITIAL_GRAVITY = 0.18;
 
-// 1번 공 전용 물리 변수
+// 모드별 물리 변수
 let speedMultiplier1 = 1.0;
 let gravity1 = INITIAL_GRAVITY;
-
-// 2번 공 전용 물리 변수
 let speedMultiplier2 = 1.0;
 let gravity2 = INITIAL_GRAVITY;
 
@@ -32,7 +29,6 @@ let balls = [];
 function initBalls(count) {
     balls = [];
     currentBallCount = count;
-    // 게임 시작 시 해당 모드의 물리 수치만 초기화
     resetPhysics(); 
     
     for (let i = 0; i < count; i++) {
@@ -46,7 +42,6 @@ function initBalls(count) {
     }
 }
 
-// 현재 활성화된 모드의 물리 수치를 초기화
 function resetPhysics() {
     if (currentBallCount === 1) {
         speedMultiplier1 = 1.0;
@@ -57,15 +52,15 @@ function resetPhysics() {
     }
 }
 
+// [복구] 카운트다운 로직
 function startCountdown() {
     gameState = "COUNTDOWN";
     countdownNum = 3;
     isFrozen = false; 
-    
-    // 목숨 잃었을 때 현재 모드 물리 초기화
     resetPhysics();
     ammo = 2; 
 
+    // 공 위치 초기화
     balls.forEach((b, i) => {
         b.x = canvas.width / 2 + (i * 100 - 50);
         b.y = canvas.height / 2;
@@ -73,6 +68,7 @@ function startCountdown() {
         b.dy = -8;
     });
 
+    // 1초마다 숫자 감소
     const timer = setInterval(() => {
         countdownNum--;
         if (countdownNum <= 0) {
@@ -92,20 +88,26 @@ function draw() {
 
     if (gameState === "START") drawStartScreen();
     else if (gameState === "SELECT") drawSelectScreen();
+    else if (gameState === "COUNTDOWN") {
+        // [복구] 카운트다운 숫자 그리기
+        ctx.save();
+        ctx.fillStyle = "white";
+        ctx.font = "bold 120px Arial";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(countdownNum, canvas.width / 2, canvas.height / 2);
+        ctx.restore();
+    }
     else if (gameState === "PLAYING") {
         if (!isFrozen) {
-            // --- [핵심 수정] 모드별로 다른 변수 업데이트 ---
             if (currentBallCount === 1) {
-                // 1번 공: 매콤하게 빠름
                 speedMultiplier1 += 0.00025;
                 gravity1 += (0.00025 * 0.7);
-                
                 updateBalls(speedMultiplier1, gravity1);
             } else {
-                // 2번 공: 여유롭게 느림
-                speedMultiplier2 += 0.00007;
-                gravity2 += (0.00007 * 0.7);
-                
+                // [수정] 2번 공 상승 폭 더 하향 (0.00007 -> 0.00004)
+                speedMultiplier2 += 0.00004;
+                gravity2 += (0.00004 * 0.7);
                 updateBalls(speedMultiplier2, gravity2);
             }
         }
@@ -115,7 +117,6 @@ function draw() {
     requestAnimationFrame(draw);
 }
 
-// 공의 움직임을 계산하는 공통 함수
 function updateBalls(multiplier, currentGravity) {
     balls.forEach(b => {
         b.dy += currentGravity;
@@ -135,8 +136,6 @@ function updateBalls(multiplier, currentGravity) {
         }
     });
 }
-
-// --- UI 및 이벤트 로직 ---
 
 function drawUI() {
     ctx.save(); 
@@ -163,8 +162,8 @@ function drawStartScreen() {
     ctx.fillStyle = "#00ff88"; ctx.textAlign = "center"; ctx.font = "bold 60px Arial";
     ctx.fillText("AIM JUGGLING", canvas.width / 2, canvas.height / 2 - 150);
     ctx.fillStyle = "white"; ctx.font = "22px Arial";
-    ctx.fillText("• Left Click: Shoot / Right Click: Ice Skill", canvas.width / 2, canvas.height / 2 - 40);
-    ctx.fillText("• Each mode has separate high scores & speed.", canvas.width / 2, canvas.height / 2 + 10);
+    ctx.fillText("• 2 Balls Mode is now even easier!", canvas.width / 2, canvas.height / 2 - 40);
+    ctx.fillText("• Speed and Gravity reset on death.", canvas.width / 2, canvas.height / 2 + 10);
     ctx.fillStyle = "#ffd700"; ctx.font = "bold 35px Arial";
     ctx.fillText("Press [ ENTER ] to Continue", canvas.width / 2, canvas.height / 2 + 100);
     ctx.restore();
@@ -176,8 +175,8 @@ function drawSelectScreen() {
     ctx.fillStyle = "white"; ctx.textAlign = "center"; ctx.font = "bold 45px Arial";
     ctx.fillText("SELECT MODE", canvas.width / 2, canvas.height / 2 - 100);
     ctx.font = "28px Arial";
-    ctx.fillStyle = "#ff4444"; ctx.fillText(`[ 1 ] 1 BALL (EXPERT - Ultra Fast)`, canvas.width / 2, canvas.height / 2);
-    ctx.fillStyle = "#00ff88"; ctx.fillText(`[ 2 ] 2 BALLS (MULTITASK - Normal)`, canvas.width / 2, canvas.height / 2 + 60);
+    ctx.fillStyle = "#ff4444"; ctx.fillText(`[ 1 ] 1 BALL (EXPERT)`, canvas.width / 2, canvas.height / 2);
+    ctx.fillStyle = "#00ff88"; ctx.fillText(`[ 2 ] 2 BALLS (RELAXED - Slow)`, canvas.width / 2, canvas.height / 2 + 60);
     ctx.restore();
 }
 
