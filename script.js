@@ -28,11 +28,12 @@ function initBalls(count) {
     currentBallCount = count;
     for (let i = 0; i < count; i++) {
         balls.push({
-            x: canvas.width / 2 + (i * 100 - 50),
+            x: canvas.width / 2 + (i * 20 - 10), // 공 2개일 때 약간의 간격만 줌
             y: canvas.height / 2,
             radius: 30,
-            dx: i === 0 ? -4 : 4,
-            dy: -7
+            // [수정] 공 2개일 때도 dx를 0으로 설정하여 수직으로 시작
+            dx: 0, 
+            dy: -8 // 초기 발사 힘을 살짝 강화
         });
     }
 }
@@ -46,10 +47,10 @@ function startCountdown() {
     ammo = 2; 
 
     balls.forEach((b, i) => {
-        b.x = canvas.width / 2 + (i * 100 - 50);
+        b.x = canvas.width / 2 + (i * 20 - 10);
         b.y = canvas.height / 2;
-        b.dx = i === 0 ? -4 : 4;
-        b.dy = -7;
+        b.dx = 0; // 카운트다운 후 시작 시에도 수직 방향 유지
+        b.dy = -8;
     });
 
     const timer = setInterval(() => {
@@ -111,6 +112,7 @@ function draw() {
     requestAnimationFrame(draw);
 }
 
+// UI 및 화면 함수들은 이전과 동일 (생략 없이 유지)
 function drawUI() {
     ctx.save(); 
     ctx.fillStyle = "white";
@@ -120,11 +122,9 @@ function drawUI() {
     ctx.fillText(`Ammo: ${ammo}`, 25, 25); 
     ctx.fillText(`Lives: ${"❤️".repeat(lives)}`, 25, 60); 
     ctx.fillText(`Score: ${score}`, 25, 95); 
-    
     let currentBest = currentBallCount === 1 ? highScore1 : highScore2;
     ctx.fillStyle = "#ffd700";
     ctx.fillText(`Best (${currentBallCount} Ball): ${currentBest}`, 25, 130); 
-    
     ctx.fillStyle = canFreeze ? "#00d4ff" : "#555";
     ctx.fillText(canFreeze ? "❄️ Skill: READY (R-Click)" : "❄️ Skill: USED", 25, 165);
     ctx.restore(); 
@@ -184,12 +184,9 @@ function drawBall(b) {
     ctx.beginPath();
     ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
     if (isFrozen) {
-        ctx.fillStyle = "#00d4ff"; 
-        ctx.shadowBlur = 25;
-        ctx.shadowColor = "#00d4ff";
+        ctx.fillStyle = "#00d4ff"; ctx.shadowBlur = 25; ctx.shadowColor = "#00d4ff";
     } else {
-        ctx.fillStyle = ammo > 0 ? "#00ff88" : "#ff4444";
-        ctx.shadowBlur = 0;
+        ctx.fillStyle = ammo > 0 ? "#00ff88" : "#ff4444"; ctx.shadowBlur = 0;
     }
     ctx.fill();
     ctx.closePath();
@@ -198,15 +195,9 @@ function drawBall(b) {
 function handleDeath() {
     lives--;
     if (currentBallCount === 1) {
-        if (score > highScore1) {
-            highScore1 = score;
-            localStorage.setItem('aimGameHighScore1', highScore1);
-        }
+        if (score > highScore1) { highScore1 = score; localStorage.setItem('aimGameHighScore1', highScore1); }
     } else {
-        if (score > highScore2) {
-            highScore2 = score;
-            localStorage.setItem('aimGameHighScore2', highScore2);
-        }
+        if (score > highScore2) { highScore2 = score; localStorage.setItem('aimGameHighScore2', highScore2); }
     }
     if (lives > 0) startCountdown(); 
     else gameState = "GAMEOVER";
@@ -214,63 +205,39 @@ function handleDeath() {
 
 window.addEventListener('keydown', (e) => {
     if (e.code === "Enter" || e.keyCode === 13) {
-        if (gameState === "START" || gameState === "GAMEOVER") {
-            gameState = "SELECT";
-        }
+        if (gameState === "START" || gameState === "GAMEOVER") gameState = "SELECT";
     }
     if (gameState === "SELECT") {
-        if (e.key === "1") {
-            lives = 3; score = 0; canFreeze = true;
-            initBalls(1);
-            startCountdown();
-        } else if (e.key === "2") {
-            lives = 3; score = 0; canFreeze = true;
-            initBalls(2);
-            startCountdown();
-        }
+        if (e.key === "1") { lives = 3; score = 0; canFreeze = true; initBalls(1); startCountdown(); }
+        else if (e.key === "2") { lives = 3; score = 0; canFreeze = true; initBalls(2); startCountdown(); }
     }
 });
 
 window.addEventListener('mousedown', (e) => {
     if (gameState !== "PLAYING" || isFrozen) return;
-
     if (e.button === 0) { 
         if (ammo <= 0) return;
         ammo--;
-        
         let hit = false;
         balls.forEach(b => {
             const diffX = b.x - e.clientX;
             const diffY = b.y - e.clientY;
             const dist = Math.sqrt(diffX**2 + diffY**2);
-
             if (dist < b.radius) {
-                // [수정] 튕기는 힘(Force)을 약간 하향 조정 (0.5/0.6 -> 0.4/0.5)
-                b.dx = diffX * 0.4; 
-                b.dy = diffY * 0.5;
-                hit = true;
-                score++;
+                b.dx = diffX * 0.4; b.dy = diffY * 0.5;
+                hit = true; score++;
             }
         });
         if (hit) ammo = 2;
-    } else if (e.button === 2) { 
-        if (canFreeze) useFreezeSkill();
-    }
+    } else if (e.button === 2) { if (canFreeze) useFreezeSkill(); }
 });
 
 function useFreezeSkill() {
-    isFrozen = true;
-    canFreeze = false; 
-    globalGravity = INITIAL_GRAVITY;
-    speedMultiplier = 1.0; 
-    ammo = 2; 
+    isFrozen = true; canFreeze = false; 
+    globalGravity = INITIAL_GRAVITY; speedMultiplier = 1.0; ammo = 2; 
     setTimeout(() => { isFrozen = false; }, 3000);
 }
 
 window.addEventListener('contextmenu', (e) => e.preventDefault());
-window.addEventListener('resize', () => {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-});
-
+window.addEventListener('resize', () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; });
 draw();
