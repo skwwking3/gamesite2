@@ -73,16 +73,14 @@ function draw() {
     else if (gameState === "SELECT") drawSelectScreen();
     else if (gameState === "PLAYING") {
         if (!isFrozen) {
-            // [밸런스] 공 2개일 때는 속도 상승을 조금 더 완만하게 (이전 버전 느낌)
-            const increment = currentBallCount === 1 ? 0.0002 : 0.00012;
+            // [난이도 재수정] 1번 공: 매우 빠름 / 2번 공: 상대적으로 느림
+            const increment = (currentBallCount === 1) ? 0.00025 : 0.0001;
+            
             speedMultiplier += increment; 
-            globalGravity += (increment * 0.8); 
+            globalGravity += (increment * 0.85); 
 
             balls.forEach(b => {
-                // 프레임 드랍처럼 보이지 않게 속도 계산 방식 보정
                 b.dy += globalGravity;
-                
-                // 위치 이동 시 multiplier를 부드럽게 적용
                 b.x += b.dx * speedMultiplier;
                 b.y += b.dy * speedMultiplier;
 
@@ -165,10 +163,10 @@ function drawSelectScreen() {
     ctx.font = "bold 45px Arial";
     ctx.fillText("SELECT MODE", canvas.width / 2, canvas.height / 2 - 100);
     ctx.font = "28px Arial";
-    ctx.fillStyle = "#00ff88";
-    ctx.fillText(`[ 1 ] 1 BALL Mode (Best: ${highScore1})`, canvas.width / 2, canvas.height / 2);
     ctx.fillStyle = "#ff4444";
-    ctx.fillText(`[ 2 ] 2 BALLS Mode (Best: ${highScore2})`, canvas.width / 2, canvas.height / 2 + 60);
+    ctx.fillText(`[ 1 ] 1 BALL (EXPERT - Very Fast!)`, canvas.width / 2, canvas.height / 2);
+    ctx.fillStyle = "#00ff88";
+    ctx.fillText(`[ 2 ] 2 BALLS (MULTITASK - Normal Speed)`, canvas.width / 2, canvas.height / 2 + 60);
     ctx.restore();
 }
 
@@ -253,7 +251,6 @@ window.addEventListener('mousedown', (e) => {
             const dist = Math.sqrt(diffX**2 + diffY**2);
 
             if (dist < b.radius) {
-                // [수정] 튕기는 힘(Force)을 더 강력하게 상향 (0.35/0.45 -> 0.5/0.6)
                 b.dx = diffX * 0.5; 
                 b.dy = diffY * 0.6;
                 hit = true;
