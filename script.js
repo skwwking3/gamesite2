@@ -12,10 +12,8 @@ let highScore = localStorage.getItem('aimGameHighScore') || 0;
 let gameState = "COUNTDOWN"; 
 let countdownNum = 3;
 
-// --- 스킬 관련 변수 ---
 let isFrozen = false; 
-let canFreeze = true; // 게임당 딱 한 번만 사용 가능하게 체크
-let freezeTimer = null;
+let canFreeze = true; 
 
 const INITIAL_GRAVITY = 0.18; 
 let ball = {
@@ -31,8 +29,6 @@ function startCountdown() {
     gameState = "COUNTDOWN";
     countdownNum = 3;
     isFrozen = false; 
-    // 죽어서 다시 시작할 때 스킬을 다시 채워줄지 말지 결정할 수 있습니다.
-    // 여기서는 '게임 시작(0점)' 할 때만 초기화되도록 구성했습니다.
     ball.x = canvas.width / 2;
     ball.y = canvas.height / 2;
     ball.dx = 0;
@@ -52,7 +48,6 @@ function startCountdown() {
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // UI 그리기
     ctx.save(); 
     ctx.fillStyle = "white";
     ctx.textAlign = "left"; 
@@ -64,7 +59,6 @@ function draw() {
     ctx.fillStyle = "#ffd700";
     ctx.fillText(`Best: ${highScore}`, 25, 130); 
     
-    // 스킬 사용 가능 여부 표시
     ctx.fillStyle = canFreeze ? "#00d4ff" : "#555";
     ctx.fillText(canFreeze ? "❄️ Skill: READY (Right Click)" : "❄️ Skill: USED", 25, 165);
     
@@ -73,12 +67,11 @@ function draw() {
     ctx.fillText(`Gravity: ${ball.gravity.toFixed(3)}`, 25, 200);
     ctx.restore(); 
 
-    // 공 그리기
     ctx.beginPath();
     ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
     if (isFrozen) {
         ctx.fillStyle = "#00d4ff"; 
-        ctx.shadowBlur = 20;
+        ctx.shadowBlur = 25;
         ctx.shadowColor = "#00d4ff";
     } else {
         ctx.fillStyle = ammo > 0 ? "#00ff88" : "#ff4444";
@@ -89,7 +82,9 @@ function draw() {
 
     if (gameState === "PLAYING") {
         if (!isFrozen) {
-            ball.gravity += 0.00005; 
+            // [수정] 중력 상승 속도 대폭 증가 (0.00005 -> 0.0001)
+            ball.gravity += 0.0001; 
+
             ball.dy += ball.gravity;
             ball.x += ball.dx;
             ball.y += ball.dy;
@@ -139,13 +134,12 @@ function draw() {
     requestAnimationFrame(draw);
 }
 
-// 마우스 이벤트
 window.addEventListener('mousedown', (e) => {
-    if (e.button === 0) { // 좌클릭
+    if (e.button === 0) { 
         if (gameState === "GAMEOVER") {
             lives = 3;
             score = 0;
-            canFreeze = true; // 게임 오버 후 재시작 시 스킬 초기화
+            canFreeze = true; 
             startCountdown();
             return;
         }
@@ -162,7 +156,7 @@ window.addEventListener('mousedown', (e) => {
             ammo = 2; 
             score++;
         }
-    } else if (e.button === 2) { // 우클릭: 얼음 스킬 사용
+    } else if (e.button === 2) { 
         if (gameState === "PLAYING" && canFreeze && !isFrozen) {
             useFreezeSkill();
         }
@@ -171,10 +165,10 @@ window.addEventListener('mousedown', (e) => {
 
 function useFreezeSkill() {
     isFrozen = true;
-    canFreeze = false; // 이제 더 이상 못 씀
-    ball.gravity = INITIAL_GRAVITY; // 중력 리셋!
+    canFreeze = false; 
+    ball.gravity = INITIAL_GRAVITY; // 중력 초기화
+    ammo = 2; // [추가] 얼음 스킬 사용 시 총알 장전
     
-    // 3초 뒤에 해제
     setTimeout(() => {
         isFrozen = false;
     }, 3000);
