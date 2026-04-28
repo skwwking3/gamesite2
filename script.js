@@ -75,7 +75,7 @@ function draw() {
 
     if (gameState === "PLAYING") {
         // [난이도 상승] 시간이 갈수록 중력이 조금씩 증가 (프레임마다 0.0001씩)
-        ball.gravity += 0.00005; 
+        ball.gravity += 0.00002; 
 
         ball.dy += ball.gravity;
         ball.x += ball.dx;
