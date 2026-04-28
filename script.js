@@ -16,20 +16,34 @@ let countdownNum = 3;
 let isFrozen = false; 
 let canFreeze = true; 
 
+// --- [물리 엔진 분리 관리] ---
 const INITIAL_GRAVITY = 0.18;
 
-// 모드별 물리 변수
-let speedMultiplier1 = 1.0;
-let gravity1 = INITIAL_GRAVITY;
-let speedMultiplier2 = 1.0;
-let gravity2 = INITIAL_GRAVITY;
+// 1번 공 모드 물리 변수
+let speed1 = 1.0;
+let grav1 = INITIAL_GRAVITY;
+
+// 2번 공 모드 물리 변수
+let speed2 = 1.0;
+let grav2 = INITIAL_GRAVITY;
 
 let balls = [];
+
+// 물리 수치 초기화 함수 (죽거나 스킬 쓸 때 호출)
+function resetCurrentPhysics() {
+    if (currentBallCount === 1) {
+        speed1 = 1.0;
+        grav1 = INITIAL_GRAVITY;
+    } else {
+        speed2 = 1.0;
+        grav2 = INITIAL_GRAVITY;
+    }
+}
 
 function initBalls(count) {
     balls = [];
     currentBallCount = count;
-    resetPhysics(); 
+    resetCurrentPhysics(); // 시작 시 초기화
     
     for (let i = 0; i < count; i++) {
         balls.push({
@@ -42,25 +56,14 @@ function initBalls(count) {
     }
 }
 
-function resetPhysics() {
-    if (currentBallCount === 1) {
-        speedMultiplier1 = 1.0;
-        gravity1 = INITIAL_GRAVITY;
-    } else {
-        speedMultiplier2 = 1.0;
-        gravity2 = INITIAL_GRAVITY;
-    }
-}
-
-// [복구] 카운트다운 로직
 function startCountdown() {
     gameState = "COUNTDOWN";
     countdownNum = 3;
     isFrozen = false; 
-    resetPhysics();
+    
+    resetCurrentPhysics(); // 죽고 나서 다시 시작할 때 속도/중력 초기화
     ammo = 2; 
 
-    // 공 위치 초기화
     balls.forEach((b, i) => {
         b.x = canvas.width / 2 + (i * 100 - 50);
         b.y = canvas.height / 2;
@@ -68,7 +71,6 @@ function startCountdown() {
         b.dy = -8;
     });
 
-    // 1초마다 숫자 감소
     const timer = setInterval(() => {
         countdownNum--;
         if (countdownNum <= 0) {
@@ -89,7 +91,6 @@ function draw() {
     if (gameState === "START") drawStartScreen();
     else if (gameState === "SELECT") drawSelectScreen();
     else if (gameState === "COUNTDOWN") {
-        // [복구] 카운트다운 숫자 그리기
         ctx.save();
         ctx.fillStyle = "white";
         ctx.font = "bold 120px Arial";
@@ -101,14 +102,15 @@ function draw() {
     else if (gameState === "PLAYING") {
         if (!isFrozen) {
             if (currentBallCount === 1) {
-                speedMultiplier1 += 0.00025;
-                gravity1 += (0.00025 * 0.7);
-                updateBalls(speedMultiplier1, gravity1);
+                // 1번 공: 빠르게 성장
+                speed1 += 0.00025;
+                grav1 += (0.00025 * 0.7);
+                updateBalls(speed1, grav1);
             } else {
-                // [수정] 2번 공 상승 폭 더 하향 (0.00007 -> 0.00004)
-                speedMultiplier2 += 0.00004;
-                gravity2 += (0.00004 * 0.7);
-                updateBalls(speedMultiplier2, gravity2);
+                // 2번 공: 느리게 성장
+                speed2 += 0.00004;
+                grav2 += (0.00004 * 0.7);
+                updateBalls(speed2, grav2);
             }
         }
     } 
@@ -117,11 +119,11 @@ function draw() {
     requestAnimationFrame(draw);
 }
 
-function updateBalls(multiplier, currentGravity) {
+function updateBalls(m, g) {
     balls.forEach(b => {
-        b.dy += currentGravity;
-        b.x += b.dx * multiplier;
-        b.y += b.dy * multiplier;
+        b.dy += g;
+        b.x += b.dx * m;
+        b.y += b.dy * m;
 
         if (b.x - b.radius < 0 || b.x + b.radius > canvas.width) {
             b.dx *= -0.8;
@@ -137,66 +139,72 @@ function updateBalls(multiplier, currentGravity) {
     });
 }
 
+function useFreezeSkill() {
+    isFrozen = true;
+    canFreeze = false; 
+    resetCurrentPhysics(); // 얼음 스킬 쓸 때 즉시 속도/중력 초기화
+    ammo = 2; 
+
+    setTimeout(() => { 
+        isFrozen = false; 
+        balls.forEach(b => {
+            b.dx = 0; b.dy = -8; 
+        });
+    }, 3000);
+}
+
+// --- UI 및 나머지 로직 ---
 function drawUI() {
     ctx.save(); 
     ctx.fillStyle = "white"; ctx.textAlign = "left"; ctx.textBaseline = "top"; ctx.font = "bold 22px Arial";
     ctx.fillText(`Ammo: ${ammo}`, 25, 25); 
     ctx.fillText(`Lives: ${"❤️".repeat(lives)}`, 25, 60); 
     ctx.fillText(`Score: ${score}`, 25, 95); 
-    
     let currentBest = currentBallCount === 1 ? highScore1 : highScore2;
-    let currentSpeed = currentBallCount === 1 ? speedMultiplier1 : speedMultiplier2;
-    
+    let curS = currentBallCount === 1 ? speed1 : speed2;
     ctx.fillStyle = "#ffd700";
-    ctx.fillText(`Best (${currentBallCount} Ball): ${currentBest}`, 25, 130); 
+    ctx.fillText(`Best: ${currentBest}`, 25, 130); 
     ctx.fillStyle = canFreeze ? "#00d4ff" : "#555";
-    ctx.fillText(canFreeze ? "❄️ Skill: READY (R-Click)" : "❄️ Skill: USED", 25, 165);
+    ctx.fillText(canFreeze ? "❄️ Skill: READY" : "❄️ Skill: USED", 25, 165);
     ctx.fillStyle = "#aaa"; ctx.font = "14px Arial";
-    ctx.fillText(`Mode Speed: x${currentSpeed.toFixed(2)}`, 25, 200);
+    ctx.fillText(`Speed: x${curS.toFixed(2)}`, 25, 200);
     ctx.restore(); 
 }
 
 function drawStartScreen() {
     ctx.save();
-    ctx.fillStyle = "rgba(0, 0, 0, 0.85)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "rgba(0, 0, 0, 0.9)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = "#00ff88"; ctx.textAlign = "center"; ctx.font = "bold 60px Arial";
-    ctx.fillText("AIM JUGGLING", canvas.width / 2, canvas.height / 2 - 150);
-    ctx.fillStyle = "white"; ctx.font = "22px Arial";
-    ctx.fillText("• 2 Balls Mode is now even easier!", canvas.width / 2, canvas.height / 2 - 40);
-    ctx.fillText("• Speed and Gravity reset on death.", canvas.width / 2, canvas.height / 2 + 10);
-    ctx.fillStyle = "#ffd700"; ctx.font = "bold 35px Arial";
-    ctx.fillText("Press [ ENTER ] to Continue", canvas.width / 2, canvas.height / 2 + 100);
+    ctx.fillText("AIM JUGGLING", canvas.width / 2, canvas.height / 2 - 100);
+    ctx.fillStyle = "white"; ctx.font = "20px Arial";
+    ctx.fillText("Speed resets on DEATH and ICE SKILL.", canvas.width / 2, canvas.height / 2);
+    ctx.fillStyle = "#ffd700"; ctx.font = "bold 30px Arial";
+    ctx.fillText("Press [ ENTER ]", canvas.width / 2, canvas.height / 2 + 100);
     ctx.restore();
 }
 
 function drawSelectScreen() {
     ctx.save();
-    ctx.fillStyle = "rgba(0, 0, 0, 0.9)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "white"; ctx.textAlign = "center"; ctx.font = "bold 45px Arial";
+    ctx.fillStyle = "rgba(0, 0, 0, 0.95)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "white"; ctx.textAlign = "center"; ctx.font = "bold 40px Arial";
     ctx.fillText("SELECT MODE", canvas.width / 2, canvas.height / 2 - 100);
-    ctx.font = "28px Arial";
-    ctx.fillStyle = "#ff4444"; ctx.fillText(`[ 1 ] 1 BALL (EXPERT)`, canvas.width / 2, canvas.height / 2);
-    ctx.fillStyle = "#00ff88"; ctx.fillText(`[ 2 ] 2 BALLS (RELAXED - Slow)`, canvas.width / 2, canvas.height / 2 + 60);
+    ctx.fillStyle = "#ff4444"; ctx.fillText("[ 1 ] 1 Ball (Expert)", canvas.width / 2, canvas.height / 2);
+    ctx.fillStyle = "#00ff88"; ctx.fillText("[ 2 ] 2 Balls (Easy)", canvas.width / 2, canvas.height / 2 + 70);
     ctx.restore();
 }
 
 function drawGameOver() {
     ctx.save();
-    ctx.fillStyle = "white"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.font = "bold 60px Arial";
-    ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2 - 40);
-    ctx.font = "30px Arial"; ctx.fillText(`Score: ${score}`, canvas.width / 2, canvas.height / 2 + 40);
-    ctx.fillStyle = "#ffd700"; ctx.fillText("Press [ ENTER ] to Restart", canvas.width / 2, canvas.height / 2 + 110);
+    ctx.fillStyle = "white"; ctx.textAlign = "center"; ctx.font = "bold 60px Arial";
+    ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2);
+    ctx.font = "30px Arial";
+    ctx.fillText("Press ENTER to Restart", canvas.width / 2, canvas.height / 2 + 80);
     ctx.restore();
 }
 
 function drawBall(b) {
-    ctx.beginPath();
-    ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
-    if (isFrozen) {
-        ctx.fillStyle = "#00d4ff"; ctx.shadowBlur = 25; ctx.shadowColor = "#00d4ff";
-    } else {
-        ctx.fillStyle = ammo > 0 ? "#00ff88" : "#ff4444"; ctx.shadowBlur = 0;
-    }
+    ctx.beginPath(); ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
+    ctx.fillStyle = isFrozen ? "#00d4ff" : (ammo > 0 ? "#00ff88" : "#ff4444");
     ctx.fill(); ctx.closePath();
 }
 
@@ -228,31 +236,15 @@ window.addEventListener('mousedown', (e) => {
         ammo--;
         let hit = false;
         balls.forEach(b => {
-            const diffX = b.x - e.clientX;
-            const diffY = b.y - e.clientY;
-            const dist = Math.sqrt(diffX**2 + diffY**2);
+            const dist = Math.sqrt((b.x - e.clientX)**2 + (b.y - e.clientY)**2);
             if (dist < b.radius) {
-                b.dx = diffX * 0.4; b.dy = diffY * 0.5;
+                b.dx = (b.x - e.clientX) * 0.4; b.dy = (b.y - e.clientY) * 0.5;
                 hit = true; score++;
             }
         });
         if (hit) ammo = 2;
     } else if (e.button === 2) { if (canFreeze) useFreezeSkill(); }
 });
-
-function useFreezeSkill() {
-    isFrozen = true;
-    canFreeze = false; 
-    resetPhysics(); 
-    ammo = 2; 
-
-    setTimeout(() => { 
-        isFrozen = false; 
-        balls.forEach(b => {
-            b.dx = 0; b.dy = -8; 
-        });
-    }, 3000);
-}
 
 window.addEventListener('contextmenu', (e) => e.preventDefault());
 window.addEventListener('resize', () => { canvas.width = window.innerWidth; canvas.height = window.innerHeight; });
