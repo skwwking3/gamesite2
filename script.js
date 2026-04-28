@@ -73,7 +73,7 @@ function draw() {
 
     if (gameState === "PLAYING") {
         // 프레임마다 아주 미세하게 중력 증가
-        ball.gravity += 0.00005; 
+        ball.gravity += 0.00003; 
 
         ball.dy += ball.gravity;
         ball.x += ball.dx;
