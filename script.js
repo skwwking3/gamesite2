@@ -84,11 +84,10 @@ function draw() {
         
         ctx.fillStyle = "white";
         ctx.font = "22px Arial";
-        // [수정] 좌클릭 설명에서 Reload 문구 삭제
         ctx.fillText("• Left Click: Shoot the ball to bounce it back up", canvas.width / 2, canvas.height / 2 - 60);
-        ctx.fillText("• Right Click: Ice Skill (3s Freeze + Reset Gravity + Reload)", canvas.width / 2, canvas.height / 2 - 20);
+        ctx.fillText("• Right Click: Ice Skill (3s Freeze + Reset Gravity & Speed + Reload)", canvas.width / 2, canvas.height / 2 - 20);
         ctx.fillText("• Warning: You only have 2 bullets! Use them carefully.", canvas.width / 2, canvas.height / 2 + 20);
-        ctx.fillText("• Game speed increases rapidly over time.", canvas.width / 2, canvas.height / 2 + 60);
+        ctx.fillText("• Game speed and gravity increase over time.", canvas.width / 2, canvas.height / 2 + 60);
         
         ctx.fillStyle = "#ffd700";
         ctx.font = "bold 35px Arial";
@@ -98,7 +97,9 @@ function draw() {
     else if (gameState === "PLAYING") {
         drawBall();
         if (!isFrozen) {
-            speedMultiplier += 0.0002; 
+            // [수정] 중력 및 속도 상승 폭 하향 조절 (더 부드러운 난이도 상승)
+            speedMultiplier += 0.00015; 
+            ball.gravity += 0.00008; 
             
             ball.dy += ball.gravity * speedMultiplier;
             ball.x += ball.dx * speedMultiplier;
@@ -189,7 +190,6 @@ window.addEventListener('mousedown', (e) => {
         if (dist < ball.radius) {
             ball.dx = diffX * 0.3; 
             ball.dy = diffY * 0.4;
-            // [복구] 공을 맞추면 다시 장전되는 로직 유지
             ammo = 2; 
             score++;
         }
@@ -201,8 +201,11 @@ window.addEventListener('mousedown', (e) => {
 function useFreezeSkill() {
     isFrozen = true;
     canFreeze = false; 
+    
+    // [수정] 얼음 스킬 시 중력뿐만 아니라 물리 속도 배율도 1.0으로 초기화
     ball.gravity = INITIAL_GRAVITY;
     speedMultiplier = 1.0; 
+    
     ammo = 2; 
     setTimeout(() => { isFrozen = false; }, 3000);
 }
