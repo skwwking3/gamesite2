@@ -73,13 +73,9 @@ function draw() {
     else if (gameState === "SELECT") drawSelectScreen();
     else if (gameState === "PLAYING") {
         if (!isFrozen) {
-            // [밸런스 조정] 중력 및 속도 가속 폭을 조금 더 완만하게 하향
-            // 1번 공: 0.00025 -> 0.00018 (EXPERT 지만 좀 더 공정하게)
-            // 2번 공: 0.0001 -> 0.00007 (멀티태스킹 집중)
             const increment = (currentBallCount === 1) ? 0.00018 : 0.00007;
-            
             speedMultiplier += increment; 
-            globalGravity += (increment * 0.7); // 중력 증가분 비율도 약간 하향
+            globalGravity += (increment * 0.7); 
 
             balls.forEach(b => {
                 b.dy += globalGravity;
@@ -114,8 +110,6 @@ function draw() {
 
     requestAnimationFrame(draw);
 }
-
-// --- UI & Screens ---
 
 function drawUI() {
     ctx.save(); 
@@ -218,8 +212,6 @@ function handleDeath() {
     else gameState = "GAMEOVER";
 }
 
-// --- Events ---
-
 window.addEventListener('keydown', (e) => {
     if (e.code === "Enter" || e.keyCode === 13) {
         if (gameState === "START" || gameState === "GAMEOVER") {
@@ -253,8 +245,9 @@ window.addEventListener('mousedown', (e) => {
             const dist = Math.sqrt(diffX**2 + diffY**2);
 
             if (dist < b.radius) {
-                b.dx = diffX * 0.5; 
-                b.dy = diffY * 0.6;
+                // [수정] 튕기는 힘(Force)을 약간 하향 조정 (0.5/0.6 -> 0.4/0.5)
+                b.dx = diffX * 0.4; 
+                b.dy = diffY * 0.5;
                 hit = true;
                 score++;
             }
