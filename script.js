@@ -16,6 +16,8 @@ let isFrozen = false;
 let canFreeze = true; 
 
 const INITIAL_GRAVITY = 0.18; 
+let speedMultiplier = 1.0; 
+
 let ball = {
     x: canvas.width / 2,
     y: canvas.height / 2,
@@ -29,6 +31,7 @@ function startCountdown() {
     gameState = "COUNTDOWN";
     countdownNum = 3;
     isFrozen = false; 
+    speedMultiplier = 1.0; 
     ball.x = canvas.width / 2;
     ball.y = canvas.height / 2;
     ball.dx = 0;
@@ -48,7 +51,6 @@ function startCountdown() {
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // UI - Visible during Playing or Countdown
     if (gameState === "PLAYING" || gameState === "COUNTDOWN") {
         ctx.save(); 
         ctx.fillStyle = "white";
@@ -64,15 +66,13 @@ function draw() {
         ctx.fillStyle = canFreeze ? "#00d4ff" : "#555";
         ctx.fillText(canFreeze ? "❄️ Skill: READY (R-Click)" : "❄️ Skill: USED", 25, 165);
         
-        // [Re-added] Gravity Display
         ctx.fillStyle = "#aaa";
         ctx.font = "14px Arial";
-        ctx.fillText(`Gravity: ${ball.gravity.toFixed(3)}`, 25, 200);
+        ctx.fillText(`Velocity Multiplier: x${speedMultiplier.toFixed(2)}`, 25, 200);
         ctx.restore(); 
     }
 
     if (gameState === "START") {
-        // English Tutorial Screen
         ctx.save();
         ctx.fillStyle = "rgba(0, 0, 0, 0.85)";
         ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -84,10 +84,11 @@ function draw() {
         
         ctx.fillStyle = "white";
         ctx.font = "22px Arial";
-        ctx.fillText("• Left Click: Shoot ball to bounce & reload", canvas.width / 2, canvas.height / 2 - 60);
+        // [수정] 좌클릭 설명에서 Reload 문구 삭제
+        ctx.fillText("• Left Click: Shoot the ball to bounce it back up", canvas.width / 2, canvas.height / 2 - 60);
         ctx.fillText("• Right Click: Ice Skill (3s Freeze + Reset Gravity + Reload)", canvas.width / 2, canvas.height / 2 - 20);
-        ctx.fillText("• Warning: You only have 2 bullets! Don't miss.", canvas.width / 2, canvas.height / 2 + 20);
-        ctx.fillText("• Gravity increases rapidly over time.", canvas.width / 2, canvas.height / 2 + 60);
+        ctx.fillText("• Warning: You only have 2 bullets! Use them carefully.", canvas.width / 2, canvas.height / 2 + 20);
+        ctx.fillText("• Game speed increases rapidly over time.", canvas.width / 2, canvas.height / 2 + 60);
         
         ctx.fillStyle = "#ffd700";
         ctx.font = "bold 35px Arial";
@@ -97,12 +98,11 @@ function draw() {
     else if (gameState === "PLAYING") {
         drawBall();
         if (!isFrozen) {
-            // [Increase Gravity Speed] 0.0001 -> 0.00015 for faster difficulty
-            ball.gravity += 0.00015; 
-
-            ball.dy += ball.gravity;
-            ball.x += ball.dx;
-            ball.y += ball.dy;
+            speedMultiplier += 0.0002; 
+            
+            ball.dy += ball.gravity * speedMultiplier;
+            ball.x += ball.dx * speedMultiplier;
+            ball.y += ball.dy * speedMultiplier;
 
             if (ball.x - ball.radius < 0 || ball.x + ball.radius > canvas.width) {
                 ball.dx *= -0.8;
@@ -189,6 +189,7 @@ window.addEventListener('mousedown', (e) => {
         if (dist < ball.radius) {
             ball.dx = diffX * 0.3; 
             ball.dy = diffY * 0.4;
+            // [복구] 공을 맞추면 다시 장전되는 로직 유지
             ammo = 2; 
             score++;
         }
@@ -201,6 +202,7 @@ function useFreezeSkill() {
     isFrozen = true;
     canFreeze = false; 
     ball.gravity = INITIAL_GRAVITY;
+    speedMultiplier = 1.0; 
     ammo = 2; 
     setTimeout(() => { isFrozen = false; }, 3000);
 }
