@@ -103,8 +103,8 @@ function draw() {
                 updateBalls(speed1, grav1);
             } else {
                 // 2번 공: 더 느리게 조정 (0.00004 -> 0.00003)
-                speed2 += 0.00003;
-                grav2 += (0.00003 * 0.7);
+                speed2 += 0.00001;
+                grav2 += (0.00001 * 0.7);
                 updateBalls(speed2, grav2);
             }
         }
