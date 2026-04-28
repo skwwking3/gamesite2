@@ -28,12 +28,12 @@ function initBalls(count) {
     currentBallCount = count;
     for (let i = 0; i < count; i++) {
         balls.push({
-            x: canvas.width / 2 + (i * 20 - 10), // 공 2개일 때 약간의 간격만 줌
+            // [수정] 시작 시 공이 겹치지 않게 간격을 100px 정도로 벌림
+            x: canvas.width / 2 + (i * 100 - 50), 
             y: canvas.height / 2,
             radius: 30,
-            // [수정] 공 2개일 때도 dx를 0으로 설정하여 수직으로 시작
             dx: 0, 
-            dy: -8 // 초기 발사 힘을 살짝 강화
+            dy: -8 
         });
     }
 }
@@ -46,10 +46,11 @@ function startCountdown() {
     globalGravity = INITIAL_GRAVITY;
     ammo = 2; 
 
+    // 카운트다운 후 재시작 시에도 위치와 수직 속도 초기화
     balls.forEach((b, i) => {
-        b.x = canvas.width / 2 + (i * 20 - 10);
+        b.x = canvas.width / 2 + (i * 100 - 50);
         b.y = canvas.height / 2;
-        b.dx = 0; // 카운트다운 후 시작 시에도 수직 방향 유지
+        b.dx = 0;
         b.dy = -8;
     });
 
@@ -112,13 +113,10 @@ function draw() {
     requestAnimationFrame(draw);
 }
 
-// UI 및 화면 함수들은 이전과 동일 (생략 없이 유지)
+// --- UI & Screens (기존 로직 유지) ---
 function drawUI() {
     ctx.save(); 
-    ctx.fillStyle = "white";
-    ctx.textAlign = "left"; 
-    ctx.textBaseline = "top"; 
-    ctx.font = "bold 22px Arial";
+    ctx.fillStyle = "white"; ctx.textAlign = "left"; ctx.textBaseline = "top"; ctx.font = "bold 22px Arial";
     ctx.fillText(`Ammo: ${ammo}`, 25, 25); 
     ctx.fillText(`Lives: ${"❤️".repeat(lives)}`, 25, 60); 
     ctx.fillText(`Score: ${score}`, 25, 95); 
@@ -134,49 +132,35 @@ function drawStartScreen() {
     ctx.save();
     ctx.fillStyle = "rgba(0, 0, 0, 0.85)";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "#00ff88";
-    ctx.textAlign = "center";
-    ctx.font = "bold 60px Arial";
+    ctx.fillStyle = "#00ff88"; ctx.textAlign = "center"; ctx.font = "bold 60px Arial";
     ctx.fillText("AIM JUGGLING", canvas.width / 2, canvas.height / 2 - 150);
-    ctx.fillStyle = "white";
-    ctx.font = "22px Arial";
+    ctx.fillStyle = "white"; ctx.font = "22px Arial";
     ctx.fillText("• Left Click: Shoot the ball to bounce it back up", canvas.width / 2, canvas.height / 2 - 60);
     ctx.fillText("• Right Click: Ice Skill (3s Freeze + Reset Physics + Reload)", canvas.width / 2, canvas.height / 2 - 20);
     ctx.fillText("• Warning: Only 2 bullets! Don't miss.", canvas.width / 2, canvas.height / 2 + 20);
     ctx.fillText("• Game speed and gravity increase over time.", canvas.width / 2, canvas.height / 2 + 60);
-    ctx.fillStyle = "#ffd700";
-    ctx.font = "bold 35px Arial";
+    ctx.fillStyle = "#ffd700"; ctx.font = "bold 35px Arial";
     ctx.fillText("Press [ ENTER ] to Continue", canvas.width / 2, canvas.height / 2 + 160);
     ctx.restore();
 }
 
 function drawSelectScreen() {
     ctx.save();
-    ctx.fillStyle = "rgba(0, 0, 0, 0.9)";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "white";
-    ctx.textAlign = "center";
-    ctx.font = "bold 45px Arial";
+    ctx.fillStyle = "rgba(0, 0, 0, 0.9)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "white"; ctx.textAlign = "center"; ctx.font = "bold 45px Arial";
     ctx.fillText("SELECT MODE", canvas.width / 2, canvas.height / 2 - 100);
     ctx.font = "28px Arial";
-    ctx.fillStyle = "#ff4444";
-    ctx.fillText(`[ 1 ] 1 BALL (EXPERT - High Gravity)`, canvas.width / 2, canvas.height / 2);
-    ctx.fillStyle = "#00ff88";
-    ctx.fillText(`[ 2 ] 2 BALLS (MULTITASK - Normal)`, canvas.width / 2, canvas.height / 2 + 60);
+    ctx.fillStyle = "#ff4444"; ctx.fillText(`[ 1 ] 1 BALL (EXPERT - High Gravity)`, canvas.width / 2, canvas.height / 2);
+    ctx.fillStyle = "#00ff88"; ctx.fillText(`[ 2 ] 2 BALLS (MULTITASK - Normal)`, canvas.width / 2, canvas.height / 2 + 60);
     ctx.restore();
 }
 
 function drawGameOver() {
     ctx.save();
-    ctx.fillStyle = "white";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.font = "bold 60px Arial";
+    ctx.fillStyle = "white"; ctx.textAlign = "center"; ctx.textBaseline = "middle"; ctx.font = "bold 60px Arial";
     ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2 - 40);
-    ctx.font = "30px Arial";
-    ctx.fillText(`Final Score: ${score}`, canvas.width / 2, canvas.height / 2 + 40);
-    ctx.fillStyle = "#ffd700";
-    ctx.fillText("Press [ ENTER ] to Restart", canvas.width / 2, canvas.height / 2 + 110);
+    ctx.font = "30px Arial"; ctx.fillText(`Final Score: ${score}`, canvas.width / 2, canvas.height / 2 + 40);
+    ctx.fillStyle = "#ffd700"; ctx.fillText("Press [ ENTER ] to Restart", canvas.width / 2, canvas.height / 2 + 110);
     ctx.restore();
 }
 
@@ -188,8 +172,7 @@ function drawBall(b) {
     } else {
         ctx.fillStyle = ammo > 0 ? "#00ff88" : "#ff4444"; ctx.shadowBlur = 0;
     }
-    ctx.fill();
-    ctx.closePath();
+    ctx.fill(); ctx.closePath();
 }
 
 function handleDeath() {
@@ -233,9 +216,20 @@ window.addEventListener('mousedown', (e) => {
 });
 
 function useFreezeSkill() {
-    isFrozen = true; canFreeze = false; 
-    globalGravity = INITIAL_GRAVITY; speedMultiplier = 1.0; ammo = 2; 
-    setTimeout(() => { isFrozen = false; }, 3000);
+    isFrozen = true;
+    canFreeze = false; 
+    globalGravity = INITIAL_GRAVITY;
+    speedMultiplier = 1.0; 
+    ammo = 2; 
+
+    // [수정] 얼음이 풀릴 때 모든 공이 위로 붕 뜨게 속도 초기화
+    setTimeout(() => { 
+        isFrozen = false; 
+        balls.forEach(b => {
+            b.dx = 0;   // 수직 발사를 위해 가로 속도 제거
+            b.dy = -8;  // 위로 붕 뜨게 함
+        });
+    }, 3000);
 }
 
 window.addEventListener('contextmenu', (e) => e.preventDefault());
