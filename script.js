@@ -7,7 +7,6 @@ canvas.height = window.innerHeight;
 let ammo = 2;
 let lives = 3;
 let score = 0;
-// 공 개수별 최고 기록 불러오기
 let highScore1 = localStorage.getItem('aimGameHighScore1') || 0; 
 let highScore2 = localStorage.getItem('aimGameHighScore2') || 0; 
 let currentBallCount = 1;
@@ -29,11 +28,11 @@ function initBalls(count) {
     currentBallCount = count;
     for (let i = 0; i < count; i++) {
         balls.push({
-            x: canvas.width / 2 + (i * 60 - 30),
+            x: canvas.width / 2 + (i * 100 - 50),
             y: canvas.height / 2,
             radius: 30,
-            dx: i === 0 ? -3 : 3,
-            dy: -6
+            dx: i === 0 ? -4 : 4,
+            dy: -7
         });
     }
 }
@@ -47,10 +46,10 @@ function startCountdown() {
     ammo = 2; 
 
     balls.forEach((b, i) => {
-        b.x = canvas.width / 2 + (i * 60 - 30);
+        b.x = canvas.width / 2 + (i * 100 - 50);
         b.y = canvas.height / 2;
-        b.dx = i === 0 ? -3 : 3;
-        b.dy = -6;
+        b.dx = i === 0 ? -4 : 4;
+        b.dy = -7;
     });
 
     const timer = setInterval(() => {
@@ -70,26 +69,26 @@ function draw() {
         balls.forEach(drawBall);
     }
 
-    if (gameState === "START") {
-        drawStartScreen();
-    }
-    else if (gameState === "SELECT") {
-        drawSelectScreen();
-    }
+    if (gameState === "START") drawStartScreen();
+    else if (gameState === "SELECT") drawSelectScreen();
     else if (gameState === "PLAYING") {
         if (!isFrozen) {
-            // [밸런스 수정] 아까의 빠른 속도로 복구
-            speedMultiplier += 0.0002; 
-            globalGravity += 0.00015; 
+            // [밸런스] 공 2개일 때는 속도 상승을 조금 더 완만하게 (이전 버전 느낌)
+            const increment = currentBallCount === 1 ? 0.0002 : 0.00012;
+            speedMultiplier += increment; 
+            globalGravity += (increment * 0.8); 
 
             balls.forEach(b => {
-                b.dy += globalGravity * speedMultiplier;
+                // 프레임 드랍처럼 보이지 않게 속도 계산 방식 보정
+                b.dy += globalGravity;
+                
+                // 위치 이동 시 multiplier를 부드럽게 적용
                 b.x += b.dx * speedMultiplier;
                 b.y += b.dy * speedMultiplier;
 
                 if (b.x - b.radius < 0 || b.x + b.radius > canvas.width) {
                     b.dx *= -0.8;
-                    b.x = b.x < b.radius ? b.radius : canvas.width - ballRadiusSafe(b);
+                    b.x = b.x < b.radius ? b.radius : canvas.width - b.radius;
                 }
                 if (b.y - b.radius < 0) {
                     b.dy *= -0.5;
@@ -111,14 +110,10 @@ function draw() {
         ctx.fillText(countdownNum, canvas.width / 2, canvas.height / 2);
         ctx.restore();
     } 
-    else if (gameState === "GAMEOVER") {
-        drawGameOver();
-    }
+    else if (gameState === "GAMEOVER") drawGameOver();
 
     requestAnimationFrame(draw);
 }
-
-function ballRadiusSafe(b) { return b.radius; }
 
 // --- UI & Screens ---
 
@@ -132,16 +127,12 @@ function drawUI() {
     ctx.fillText(`Lives: ${"❤️".repeat(lives)}`, 25, 60); 
     ctx.fillText(`Score: ${score}`, 25, 95); 
     
-    // 모드에 맞는 최고 기록 표시
     let currentBest = currentBallCount === 1 ? highScore1 : highScore2;
     ctx.fillStyle = "#ffd700";
     ctx.fillText(`Best (${currentBallCount} Ball): ${currentBest}`, 25, 130); 
     
     ctx.fillStyle = canFreeze ? "#00d4ff" : "#555";
     ctx.fillText(canFreeze ? "❄️ Skill: READY (R-Click)" : "❄️ Skill: USED", 25, 165);
-    ctx.fillStyle = "#aaa";
-    ctx.font = "14px Arial";
-    ctx.fillText(`Velocity: x${speedMultiplier.toFixed(2)}`, 25, 200);
     ctx.restore(); 
 }
 
@@ -158,7 +149,7 @@ function drawStartScreen() {
     ctx.fillText("• Left Click: Shoot the ball to bounce it back up", canvas.width / 2, canvas.height / 2 - 60);
     ctx.fillText("• Right Click: Ice Skill (3s Freeze + Reset Physics + Reload)", canvas.width / 2, canvas.height / 2 - 20);
     ctx.fillText("• Warning: Only 2 bullets! Don't miss.", canvas.width / 2, canvas.height / 2 + 20);
-    ctx.fillText("• Gravity & Speed increase rapidly over time.", canvas.width / 2, canvas.height / 2 + 60);
+    ctx.fillText("• Game speed and gravity increase over time.", canvas.width / 2, canvas.height / 2 + 60);
     ctx.fillStyle = "#ffd700";
     ctx.font = "bold 35px Arial";
     ctx.fillText("Press [ ENTER ] to Continue", canvas.width / 2, canvas.height / 2 + 160);
@@ -212,7 +203,6 @@ function drawBall(b) {
 
 function handleDeath() {
     lives--;
-    // 최고 기록 갱신 (모드별로 따로 저장)
     if (currentBallCount === 1) {
         if (score > highScore1) {
             highScore1 = score;
@@ -224,7 +214,6 @@ function handleDeath() {
             localStorage.setItem('aimGameHighScore2', highScore2);
         }
     }
-
     if (lives > 0) startCountdown(); 
     else gameState = "GAMEOVER";
 }
@@ -264,8 +253,9 @@ window.addEventListener('mousedown', (e) => {
             const dist = Math.sqrt(diffX**2 + diffY**2);
 
             if (dist < b.radius) {
-                b.dx = diffX * 0.35; 
-                b.dy = diffY * 0.45;
+                // [수정] 튕기는 힘(Force)을 더 강력하게 상향 (0.35/0.45 -> 0.5/0.6)
+                b.dx = diffX * 0.5; 
+                b.dy = diffY * 0.6;
                 hit = true;
                 score++;
             }
