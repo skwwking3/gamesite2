@@ -1,6 +1,6 @@
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
-const ammoDisplay = document.getElementById('ammo');
+// const ammoDisplay = document.getElementById('ammo'); <- 이 줄을 삭제하거나 주석 처리하세요
 
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
