@@ -12,7 +12,7 @@ let highScore = localStorage.getItem('aimGameHighScore') || 0;
 let gameState = "COUNTDOWN"; 
 let countdownNum = 3;
 
-// 초기 중력 설정
+// 초기 중력 상수로 고정
 const INITIAL_GRAVITY = 0.18; 
 let ball = {
     x: canvas.width / 2,
@@ -31,7 +31,7 @@ function startCountdown() {
     ball.dx = 0;
     ball.dy = 0;
     
-    // 리셋 시 중력도 초기값으로 되돌림 (중요!)
+    // [수정] 중력을 즉시 초기값으로 고정
     ball.gravity = INITIAL_GRAVITY; 
     ammo = 2; 
 
@@ -47,7 +47,6 @@ function startCountdown() {
 function draw() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-    // --- UI 영역 ---
     ctx.save(); 
     ctx.fillStyle = "white";
     ctx.textAlign = "left"; 
@@ -60,13 +59,12 @@ function draw() {
     ctx.fillStyle = "#ffd700";
     ctx.fillText(`Best: ${highScore}`, 25, 130); 
     
-    // 현재 난이도(중력) 표시 (선택 사항 - 테스트용으로 좋음)
+    // [수정] 중력 수치를 소수점 3자리까지 정확히 표시
     ctx.fillStyle = "#aaa";
     ctx.font = "14px Arial";
     ctx.fillText(`Gravity: ${ball.gravity.toFixed(3)}`, 25, 165);
     ctx.restore(); 
 
-    // --- 공 그리기 ---
     ctx.beginPath();
     ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
     ctx.fillStyle = ammo > 0 ? "#00ff88" : "#ff4444";
@@ -74,8 +72,8 @@ function draw() {
     ctx.closePath();
 
     if (gameState === "PLAYING") {
-        // [난이도 상승] 시간이 갈수록 중력이 조금씩 증가 (프레임마다 0.0001씩)
-        ball.gravity += 0.00002; 
+        // 프레임마다 아주 미세하게 중력 증가
+        ball.gravity += 0.00005; 
 
         ball.dy += ball.gravity;
         ball.x += ball.dx;
@@ -106,6 +104,9 @@ function draw() {
         }
     } 
     else if (gameState === "COUNTDOWN") {
+        // 카운트다운 중에도 중력이 늘어나지 않도록 강제 고정
+        ball.gravity = INITIAL_GRAVITY;
+        
         ctx.save();
         ctx.fillStyle = "white";
         ctx.font = "bold 100px Arial";
@@ -141,7 +142,6 @@ window.addEventListener('mousedown', (e) => {
     if (gameState !== "PLAYING" || ammo <= 0) return;
 
     ammo--;
-
     const diffX = ball.x - e.clientX;
     const diffY = ball.y - e.clientY;
     const dist = Math.sqrt(diffX**2 + diffY**2);
