@@ -19,11 +19,11 @@ let canFreeze = true;
 // --- [물리 엔진 설정] ---
 const INITIAL_GRAVITY = 0.18;
 
-// 1번 공 모드 (EASY - 실제로는 공 1개라 더 쉬움)
+// 1번 공 모드 (EASY 명칭)
 let speed1 = 1.0;
 let grav1 = INITIAL_GRAVITY;
 
-// 2번 공 모드 (HARD - 실제로는 공 2개라 더 어려움)
+// 2번 공 모드 (HARD 명칭)
 let speed2 = 1.0; 
 let grav2 = INITIAL_GRAVITY;
 
@@ -100,14 +100,14 @@ function draw() {
     else if (gameState === "PLAYING") {
         if (!isFrozen) {
             if (currentBallCount === 1) {
-                // 1번 공 (EASY 명칭): 기존의 빠른 속도감 유지
+                // [복구] 1번 공 속도 상승 폭 (이전 값)
                 speed1 += 0.00025;
-                grav1 += 0.00015;
+                grav1 += (0.00025 * 0.7);
                 updateBalls(speed1, grav1);
             } else {
-                // 2번 공 (HARD 명칭): 요청대로 아주 느린 속도 증가율 유지
-                speed2 += 0.00003;
-                grav2 += 0.00001; 
+                // [복구] 2번 공 속도 상승 폭 (아까전 더 빨랐던 값으로 복구)
+                speed2 += 0.00007;
+                grav2 += (0.00007 * 0.7);
                 updateBalls(speed2, grav2);
             }
         }
@@ -156,7 +156,6 @@ function drawUI() {
     ctx.fillText(`Lives: ${"❤️".repeat(lives)}`, 25, 60); 
     ctx.fillText(`Score: ${score}`, 25, 95); 
     
-    // 명칭 변경 적용
     let modeName = currentBallCount === 1 ? "EASY" : "HARD";
     let currentBest = currentBallCount === 1 ? highScore1 : highScore2;
     let curS = currentBallCount === 1 ? speed1 : speed2;
@@ -166,17 +165,18 @@ function drawUI() {
     ctx.fillStyle = canFreeze ? "#00d4ff" : "#555";
     ctx.fillText(canFreeze ? "❄️ Skill: READY" : "❄️ Skill: USED", 25, 165);
     ctx.fillStyle = "#aaa"; ctx.font = "14px Arial";
-    ctx.fillText(`Speed Mult: x${curS.toFixed(3)}`, 25, 200);
+    ctx.fillText(`Speed: x${curS.toFixed(3)}`, 25, 200);
     ctx.restore(); 
 }
 
+// ... (drawStartScreen, drawSelectScreen, drawGameOver, drawBall, handleDeath, EventListeners는 이전과 동일)
 function drawStartScreen() {
     ctx.save();
     ctx.fillStyle = "rgba(0, 0, 0, 0.85)"; ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = "#00ff88"; ctx.textAlign = "center"; ctx.font = "bold 60px Arial";
     ctx.fillText("AIM JUGGLING", canvas.width / 2, canvas.height / 2 - 150);
     ctx.fillStyle = "white"; ctx.font = "22px Arial";
-    ctx.fillText("• Mode 1: EASY (1 Ball) / Mode 2: HARD (2 Balls)", canvas.width / 2, canvas.height / 2 - 40);
+    ctx.fillText("• Left Click: Shoot / Right Click: Ice Skill", canvas.width / 2, canvas.height / 2 - 40);
     ctx.fillText("• Speed resets on DEATH and ICE SKILL.", canvas.width / 2, canvas.height / 2 + 10);
     ctx.fillStyle = "#ffd700"; ctx.font = "bold 35px Arial";
     ctx.fillText("Press [ ENTER ] to Continue", canvas.width / 2, canvas.height / 2 + 120);
